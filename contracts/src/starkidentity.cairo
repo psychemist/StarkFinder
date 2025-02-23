@@ -1,5 +1,46 @@
+use starknet::{ContractAddress};
+
+#[starknet::interface]
+pub trait IStarkIdentity<TContractState> {
+    fn create_identity(
+        ref self: TContractState, username: felt252, recovery_address: ContractAddress,
+    );
+    fn add_identity(
+        ref self: TContractState, username: felt252, ens_name: felt252, stark_name: felt252,
+    );
+    fn update_identity(ref self: TContractState, field: felt252, value: felt252);
+    fn get_identity(self: @TContractState, address: ContractAddress) -> Identity;
+    fn identity_exists(self: @TContractState, address: ContractAddress) -> bool;
+    fn link_address(ref self: TContractState, address_to_link: ContractAddress);
+    fn add_social_verification(
+        ref self: TContractState, platform: felt252, verification_proof: felt252,
+    );
+    fn verify_address_ownership(self: @TContractState, address: ContractAddress) -> bool;
+    fn verify_social_proof(self: @TContractState, platform: felt252, proof: felt252) -> bool;
+    fn record_activity(
+        ref self: TContractState, activity_type: felt252, protocol: felt252, value: u256,
+    );
+    fn get_activities(
+        self: @TContractState, address: ContractAddress, start_index: u32, limit: u32,
+    ) -> Array<ActivityRecord>;
+    fn has_used_protocol(
+        self: @TContractState, address: ContractAddress, protocol: felt252,
+    ) -> bool;
+    fn record_protocol_usage(ref self: TContractState, address: ContractAddress, protocol: felt252);
+    fn request_verification(ref self: TContractState, verification_type: felt252);
+    fn submit_address_signature(
+        ref self: TContractState, address: ContractAddress, signature: felt252,
+    );
+    fn submit_social_proof(ref self: TContractState, platform: felt252, signature: felt252);
+    fn update_reputation(ref self: TContractState, address: ContractAddress, points: i32);
+    fn generate_ownership_signature(
+        self: @TContractState, owner: ContractAddress, address: ContractAddress,
+    ) -> felt252;
+    fn get_proof_address(self: @TContractState, signature: felt252) -> ContractAddress;
+}
+
 #[starknet::contract]
-pub mod StarkFinderIdentity {
+pub mod StarkIdentity {
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use core::starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
     use core::array::ArrayTrait;
@@ -10,16 +51,16 @@ pub mod StarkFinderIdentity {
         pub address: ContractAddress,
         pub username: felt252,
         // Web3 Identity Components
-        pub ens_name: felt252, // Ethereum Name Service integration
-        pub stark_name: felt252, // Starknet Name Service integration
-        pub social_connections: u32, // Number of verified social connections
+        pub ens_name: felt252,
+        pub stark_name: felt252,
+        pub social_connections: u32,
         // DeFi Identity
         pub defi_score: u32,
         pub transaction_volume: u256,
         pub protocols_used: u32,
         // Verification & Trust
         pub verification_level: u8, // 0: None, 1: Basic, 2: Advanced, 3: Full
-        // pub trust_score: u32,
+        pub trust_score: u32,
         pub is_verified: bool,
         // Activity Metrics
         pub last_active: u64,
@@ -125,7 +166,7 @@ pub mod StarkFinderIdentity {
     }
 
     #[abi(embed_v0)]
-    impl StarkFinderIdentityImpl of super::IStarkFinderIdentity<ContractState> {
+    impl StarkIdentityImpl of super::IStarkIdentity<ContractState> {
         fn create_identity(
             ref self: ContractState, username: felt252, recovery_address: ContractAddress,
         ) {
@@ -191,9 +232,6 @@ pub mod StarkFinderIdentity {
         fn link_address(ref self: ContractState, address_to_link: ContractAddress) {
             let caller = get_caller_address();
             assert(self.identity_exists(caller), 'Identity does not exist');
-
-            // Verify ownership of address_to_link (implementation depends on your verification
-            // method)
             assert(
                 self.verify_address_ownership(address_to_link), 'Address ownership not verified',
             );
@@ -209,19 +247,15 @@ pub mod StarkFinderIdentity {
                 );
         }
 
-        // Add social verification
         fn add_social_verification(
             ref self: ContractState, platform: felt252, verification_proof: felt252,
         ) {
             let caller = get_caller_address();
             assert(self.identity_exists(caller), 'Identity does not exist');
-
-            // Verify the social proof (implementation depends on your verification method)
             assert(self.verify_social_proof(platform, verification_proof), 'Invalid verification');
 
             self.social_verifications.write((caller, platform), true);
 
-            // Update social connections count
             let mut identity = self.identities.read(caller);
             identity.social_connections += 1;
             self.identities.write(caller, identity);
@@ -234,7 +268,6 @@ pub mod StarkFinderIdentity {
                 );
         }
 
-        // Record DeFi activity
         fn record_activity(
             ref self: ContractState, activity_type: felt252, protocol: felt252, value: u256,
         ) {
@@ -249,13 +282,11 @@ pub mod StarkFinderIdentity {
             self.activity_records.write((caller, current_count), activity);
             self.activity_count.write(caller, current_count + 1);
 
-            // Update identity metrics
             let mut identity = self.identities.read(caller);
             identity.transaction_count += 1;
             identity.transaction_volume += value;
             identity.last_active = get_block_timestamp();
 
-            // Update protocols used if new
             if !self.has_used_protocol(caller, protocol) {
                 identity.protocols_used += 1;
             }
@@ -274,13 +305,11 @@ pub mod StarkFinderIdentity {
                 );
         }
 
-        // Get identity with all web3 credentials
         fn get_identity(self: @ContractState, address: ContractAddress) -> Identity {
             assert(self.identity_exists(address), 'Identity does not exist');
             self.identities.read(address)
         }
 
-        // Get all activities for an address
         fn get_activities(
             self: @ContractState, address: ContractAddress, start_index: u32, limit: u32,
         ) -> Array<ActivityRecord> {
@@ -301,7 +330,6 @@ pub mod StarkFinderIdentity {
             let mut identity = self.identities.read(caller);
             assert(identity.address == caller, 'Identity does not exist');
 
-            // Update specific field based on field parameter
             match field {
                 'username' => identity.username = value,
                 'recovery_address' => identity.recovery_address = value.try_into().unwrap(),
@@ -317,10 +345,7 @@ pub mod StarkFinderIdentity {
             assert(self.identity_exists(caller), 'Identity does not exist');
 
             let request = VerificationRequest {
-                requester: caller,
-                verification_type,
-                status: 0, // Pending
-                timestamp: get_block_timestamp(),
+                requester: caller, verification_type, status: 0, timestamp: get_block_timestamp(),
             };
 
             self.verification_requests.write((caller, verification_type), request);
@@ -373,65 +398,47 @@ pub mod StarkFinderIdentity {
         fn has_used_protocol(
             self: @ContractState, address: ContractAddress, protocol: felt252,
         ) -> bool {
-            // Get protocol usage data for the address
             let usage = self.protocol_usage.read((address, protocol));
-
-            // If first_used is not 0, the protocol has been used
             usage.first_used != 0
         }
 
         fn verify_address_ownership(self: @ContractState, address: ContractAddress) -> bool {
-            // Get the caller's address
             let caller = get_caller_address();
-
-            // If the caller is the address itself, it's verified
             if caller == address {
                 return true;
             }
 
-            // Check if there's a stored signature proving ownership
             let stored_signature = self.address_signatures.read(address);
             if stored_signature == 0 {
                 return false;
             }
 
-            // Verify the signature matches the expected pattern
-            // This is a simplified example - in production you'd want more robust verification
+            // TODO(): Temporary implementation: using signature
             let expected_signature = self.generate_ownership_signature(caller, address);
             stored_signature == expected_signature
         }
 
         fn verify_social_proof(self: @ContractState, platform: felt252, proof: felt252) -> bool {
             let caller = get_caller_address();
-
-            // Get the stored proof for this platform and address
             let stored_proof = self.social_proofs.read((caller, platform));
-
-            // Check if proof exists and is verified by an authorized verifier
             if stored_proof.timestamp == 0 {
                 return false;
             }
 
-            // Verify the verifier's authorization
             let is_verifier = self.verifiers.read(stored_proof.verified_by);
             if !is_verifier {
                 return false;
             }
 
-            // Check if the proof matches and is not expired
             let current_time = get_block_timestamp();
             let proof_age = current_time - stored_proof.timestamp;
 
-            // Proofs are valid for 30 days (2592000 seconds)
             if proof_age > 2592000 {
                 return false;
             }
 
-            // Verify the proof signature matches
             stored_proof.signature == proof
         }
-
-        // Helper functions for the verification system
 
         fn record_protocol_usage(
             ref self: ContractState, address: ContractAddress, protocol: felt252,
@@ -440,7 +447,6 @@ pub mod StarkFinderIdentity {
             let mut usage = self.protocol_usage.read((address, protocol));
 
             if usage.first_used == 0 {
-                // First time using this protocol
                 usage =
                     ProtocolUsage {
                         protocol,
@@ -449,7 +455,6 @@ pub mod StarkFinderIdentity {
                         interaction_count: 1,
                     };
             } else {
-                // Update existing usage
                 usage.last_used = current_time;
                 usage.interaction_count += 1;
             }
@@ -477,19 +482,15 @@ pub mod StarkFinderIdentity {
             self.social_proofs.write((user_address, platform), proof);
         }
 
+        // TODO: Implement pedersen hash or other cryptographic function
         fn generate_ownership_signature(
             self: @ContractState, owner: ContractAddress, address: ContractAddress,
         ) -> felt252 {
-            // This is a simplified example - in production use proper signature verification
-            // Typically would use pedersen hash or other cryptographic function
             let timestamp = get_block_timestamp();
             owner.into() + address.into() + timestamp
         }
 
-        fn get_proof_address(self: @ContractState, signature: felt252) -> ContractAddress {
-            // In production, this would decode the signature to get the user's address
-            // This is a simplified placeholder
-            contract_address_const::<0>()
-        }
+        // TODO(): decode signature to get the user's address
+        fn get_proof_address(self: @ContractState, signature: felt252) -> ContractAddress {}
     }
 }
