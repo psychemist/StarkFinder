@@ -399,7 +399,10 @@ pub mod StarkIdentity {
             assert(self.identity_exists(caller), 'Identity does not exist');
 
             let request = VerificationRequest {
-                requester: caller, verification_type, status: VERIFICATION_PENDING, timestamp: get_block_timestamp(),
+                requester: caller,
+                verification_type,
+                status: VERIFICATION_PENDING,
+                timestamp: get_block_timestamp(),
             };
 
             self.verification_requests.write((caller, verification_type), request);
@@ -511,7 +514,10 @@ pub mod StarkIdentity {
         }
 
         fn update_verification_request(
-            ref self: ContractState, user: ContractAddress, verification_type: felt252, new_status: u8
+            ref self: ContractState,
+            user: ContractAddress,
+            verification_type: felt252,
+            new_status: u8,
         ) {
             let caller = get_caller_address();
             assert(self.verifiers.read(caller), 'Not authorized');
@@ -523,14 +529,15 @@ pub mod StarkIdentity {
             request.status = new_status;
             self.verification_requests.write((user, verification_type), request);
 
-            self.emit(
-                VerificationStatusChanged {
-                    address: user,
-                    verification_type: verification_type,
-                    status: new_status,
-                    timestamp: get_block_timestamp(),
-                }
-            );
+            self
+                .emit(
+                    VerificationStatusChanged {
+                        address: user,
+                        verification_type: verification_type,
+                        status: new_status,
+                        timestamp: get_block_timestamp(),
+                    },
+                );
         }
     }
 }

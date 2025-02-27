@@ -121,7 +121,7 @@ fn test_update_identity() {
     assert(identity.username == 'bobby', 'Update: Username not updated');
     assert(identity.ens_name == 'bobby.eth', 'Update: ENS name not updated');
     // assert(identity.username == 'bobby', 'Update: Username not updated');
-    // assert(identity.username == 'bobby', 'Update: Username not updated');
+// assert(identity.username == 'bobby', 'Update: Username not updated');
 }
 
 #[test]
@@ -323,26 +323,27 @@ fn test_event_identity_created() {
     cheat_caller_address(contract_address, USER1(), CheatSpan::TargetCalls(1));
     let ts = get_block_timestamp() + 1000;
     cheat_block_timestamp(contract_address, ts, CheatSpan::TargetCalls(1));
-    
+
     let mut spy = spy_events();
     contract_dispatcher.create_identity('alice', 'alice.eth', 'alice.stark', RECOVERY());
-    
-    spy.assert_emitted(
-        @array![
-            (
-                contract_address,
-                StarkIdentity::Event::IdentityCreated(
-                    StarkIdentity::IdentityCreated {
-                        address: USER1(),
-                        username: 'alice',
-                        ens_name: 'alice.eth',
-                        stark_name: 'alice.stark',
-                        timestamp: ts,
-                    },
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    StarkIdentity::Event::IdentityCreated(
+                        StarkIdentity::IdentityCreated {
+                            address: USER1(),
+                            username: 'alice',
+                            ens_name: 'alice.eth',
+                            stark_name: 'alice.stark',
+                            timestamp: ts,
+                        },
+                    ),
                 ),
-            )
-        ]
-    );
+            ],
+        );
 }
 
 // Test for IdentityUpdated event.
@@ -353,25 +354,24 @@ fn test_event_identity_updated() {
     let ts = get_block_timestamp() + 1000;
     cheat_block_timestamp(contract_address, ts, CheatSpan::TargetCalls(1));
     contract_dispatcher.create_identity('bob', 'bob.eth', 'bob.stark', RECOVERY());
-    
+
     let mut spy = spy_events();
     // Update username field.
     contract_dispatcher.update_identity('username', 'bobby');
-    
-    spy.assert_emitted(
-        @array![
-            (
-                contract_address,
-                StarkIdentity::Event::IdentityUpdated(
-                    StarkIdentity::IdentityUpdated {
-                        address: USER1(),
-                        field: 'username',
-                        timestamp: get_block_timestamp(),
-                    },
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    StarkIdentity::Event::IdentityUpdated(
+                        StarkIdentity::IdentityUpdated {
+                            address: USER1(), field: 'username', timestamp: get_block_timestamp(),
+                        },
+                    ),
                 ),
-            )
-        ]
-    );
+            ],
+        );
 }
 
 // Test for ActivityRecorded event.
@@ -382,27 +382,28 @@ fn test_event_activity_recorded() {
     let ts = get_block_timestamp() + 1000;
     cheat_block_timestamp(contract_address, ts, CheatSpan::TargetCalls(1));
     contract_dispatcher.create_identity('carol', 'carol.eth', 'carol.stark', RECOVERY());
-    
+
     let mut spy = spy_events();
     let value: u256 = 2000;
     contract_dispatcher.record_activity('swap', 'uniswap', value);
-    
-    spy.assert_emitted(
-        @array![
-            (
-                contract_address,
-                StarkIdentity::Event::ActivityRecorded(
-                    StarkIdentity::ActivityRecorded {
-                        address: USER1(),
-                        activity_type: 'swap',
-                        protocol: 'uniswap',
-                        value: value,
-                        timestamp: get_block_timestamp(),
-                    },
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    StarkIdentity::Event::ActivityRecorded(
+                        StarkIdentity::ActivityRecorded {
+                            address: USER1(),
+                            activity_type: 'swap',
+                            protocol: 'uniswap',
+                            value: value,
+                            timestamp: get_block_timestamp(),
+                        },
+                    ),
                 ),
-            )
-        ]
-    );
+            ],
+        );
 }
 
 // Test for AddressLinked event.
@@ -417,24 +418,25 @@ fn test_event_address_linked() {
 
     let signature = contract_dispatcher.generate_ownership_signature(USER1(), USER2());
     contract_dispatcher.submit_address_signature(USER1(), signature);
-    
+
     let mut spy = spy_events();
     contract_dispatcher.link_address(USER2());
-    
-    spy.assert_emitted(
-        @array![
-            (
-                contract_address,
-                StarkIdentity::Event::AddressLinked(
-                    StarkIdentity::AddressLinked {
-                        primary_address: USER1(),
-                        linked_address: USER2(),
-                        timestamp: get_block_timestamp(),
-                    },
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    StarkIdentity::Event::AddressLinked(
+                        StarkIdentity::AddressLinked {
+                            primary_address: USER1(),
+                            linked_address: USER2(),
+                            timestamp: get_block_timestamp(),
+                        },
+                    ),
                 ),
-            )
-        ]
-    );
+            ],
+        );
 }
 
 // Test for  VerificationRequested event
@@ -447,24 +449,23 @@ fn test_event_verification_request() {
     cheat_block_timestamp(contract_address, ts, CheatSpan::TargetCalls(6));
     cheat_caller_address(contract_address, USER1(), CheatSpan::TargetCalls(2));
     contract_dispatcher.create_identity('eve', 'eve.eth', 'eve.stark', RECOVERY());
-    
+
     // Request verification.
     let mut spy_req = spy_events();
     contract_dispatcher.request_verification('phone');
-    spy_req.assert_emitted(
-        @array![
-            (
-                contract_address,
-                StarkIdentity::Event::VerificationRequested(
-                    StarkIdentity::VerificationRequested {
-                        requester: USER1(),
-                        verification_type: 'phone',
-                        timestamp: ts,
-                    },
+    spy_req
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    StarkIdentity::Event::VerificationRequested(
+                        StarkIdentity::VerificationRequested {
+                            requester: USER1(), verification_type: 'phone', timestamp: ts,
+                        },
+                    ),
                 ),
-            )
-        ]
-    );
+            ],
+        );
 }
 
 #[test]
@@ -476,37 +477,36 @@ fn test_event_social_verification() {
     cheat_block_timestamp(contract_address, ts, CheatSpan::TargetCalls(6));
     cheat_caller_address(contract_address, USER1(), CheatSpan::TargetCalls(2));
     contract_dispatcher.create_identity('eve', 'eve.eth', 'eve.stark', RECOVERY());
-    
+
     // Request verification.
     contract_dispatcher.request_verification('phone');
 
     // Set up social verification: First, add a verifier.
     cheat_caller_address(contract_address, ADMIN(), CheatSpan::TargetCalls(1));
     contract_dispatcher.add_verifier(VERIFIER());
-    
+
     // Submit social proof as VERIFIER.
     cheat_caller_address(contract_address, VERIFIER(), CheatSpan::TargetCalls(1));
     let proof: felt252 = 96;
     contract_dispatcher.submit_social_proof('mastodon', USER1(), proof);
-    
+
     // Now, USER1 calls add_social_verification.
     let mut spy_social = spy_events();
     cheat_caller_address(contract_address, USER1(), CheatSpan::TargetCalls(2));
     contract_dispatcher.verify_social_proof('mastodon', proof);
     contract_dispatcher.add_social_verification('mastodon', proof);
-    
-    spy_social.assert_emitted(
-        @array![
-            (
-                contract_address,
-                StarkIdentity::Event::SocialVerificationAdded(
-                    StarkIdentity::SocialVerificationAdded {
-                        address: USER1(),
-                        platform: 'mastodon',
-                        timestamp: ts,
-                    },
+
+    spy_social
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    StarkIdentity::Event::SocialVerificationAdded(
+                        StarkIdentity::SocialVerificationAdded {
+                            address: USER1(), platform: 'mastodon', timestamp: ts,
+                        },
+                    ),
                 ),
-            )
-        ]
-    );
+            ],
+        );
 }
