@@ -1,11 +1,9 @@
 use starknet::ContractAddress;
-// use contracts::starkidentity::StarkIdentity::{ActivityRecord, Identity};
 use contracts::starkidentity::{ActivityRecord, Identity};
 
 #[starknet::interface]
 pub trait IStarkIdentity<TContractState> {
-    /// Creates a new identity for the caller with username, ENS name, Stark name, and recovery
-    /// address.
+    /// Creates new identity caller with username, ENS name, Stark name, and recovery address.
     fn create_identity(
         ref self: TContractState,
         username: felt252,
