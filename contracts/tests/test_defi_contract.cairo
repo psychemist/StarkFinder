@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, contract_address_const};
 use snforge_std::{
     declare, ContractClassTrait, DeclareResultTrait, cheat_caller_address, CheatSpan,
-    cheat_block_timestamp
+    cheat_block_timestamp,
 };
 use contracts::interfaces::IDefiVault::{IDefiVaultDispatcher, IDefiVaultDispatcherTrait};
 use contracts::mock_erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
